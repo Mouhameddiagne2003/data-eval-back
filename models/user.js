@@ -8,10 +8,13 @@ module.exports = (sequelize) => {
             defaultValue: DataTypes.UUIDV4,
             primaryKey: true,
         },
-        username: {
+        prenom: {
             type: DataTypes.STRING,
-            allowNull: false,
-            unique: true,
+            allowNull: false
+        },
+        nom: {
+            type: DataTypes.STRING,
+            allowNull: false
         },
         email: {
             type: DataTypes.STRING,
@@ -26,7 +29,7 @@ module.exports = (sequelize) => {
             allowNull: false,
         },
         role: {
-            type: DataTypes.ENUM('professor', 'student'),
+            type: DataTypes.ENUM('professor', 'student','admin'),
             allowNull: false,
         },
     });
