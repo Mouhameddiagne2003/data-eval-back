@@ -19,11 +19,10 @@ const register = async (req, res, next) => {
         if (existingUser) {
             return next(errorHandler(400, "Cet email est déjà utilisé"));
         }
-
-
+        const status = role === "professor" ? "pending" : "active"; // Étudiants activés directement
 
         // Création de l'utilisateur
-        await User.create({ prenom, nom, email, password, role });
+        await User.create({ prenom, nom, email, password, role, status });
 
         res.status(201).json({ message: 'Utilisateur créé avec succès' });
     } catch (error) {
@@ -55,6 +54,11 @@ const login = async (req, res, next) => {
             return next(errorHandler(401, "Identifiants invalides"));
         }
 
+        // Vérifier le statut
+        if (user.status !== "active") {
+            return next(errorHandler(403, "Compte non activé, en attente de validation"));
+        }
+
         // Génération du token JWT
         const token = jwt.sign(
             { id: user.id, role: user.role },
@@ -72,7 +76,8 @@ const login = async (req, res, next) => {
         })
             .status(200)
             .json({
-                message: 'Connexion réussie'
+                message: 'Connexion réussie',
+                cookie: token
             });
 
     } catch (error) {

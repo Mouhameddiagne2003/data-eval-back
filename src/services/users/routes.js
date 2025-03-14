@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllUsers, getUserById, updateUser, deleteUser } = require('./controller');
+const { getAllUsers, getUserById, updateUser, deleteUser, validateProfessor} = require('./controller');
 const { verifyToken, isAdmin } = require('../../middleware/auth');
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.put('/:id', verifyToken, updateUser);
 
 // 📌 Supprimer un utilisateur (ADMIN uniquement)
 router.delete('/:id', verifyToken, isAdmin, deleteUser);
+
+router.put("/validate/:id", verifyToken, isAdmin, validateProfessor);
+
 
 module.exports = router;

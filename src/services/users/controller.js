@@ -65,4 +65,23 @@ const updateUser = async (req, res, next) => {
     }
 };
 
-module.exports = { getAllUsers, getUserById, updateUser, deleteUser };
+const validateProfessor = async (req, res, next) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) return next(errorHandler(404, "Utilisateur non trouvé"));
+
+        if (user.role !== "professeur") {
+            return next(errorHandler(400, "Seuls les professeurs peuvent être validés"));
+        }
+
+        user.status = "active";
+        await user.save();
+
+        res.status(200).json({ message: "Professeur activé avec succès" });
+    } catch (error) {
+        next(errorHandler(500, "Erreur lors de la validation du professeur"));
+    }
+};
+
+
+module.exports = { getAllUsers, getUserById, updateUser, deleteUser, validateProfessor };
