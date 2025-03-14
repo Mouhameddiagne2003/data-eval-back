@@ -32,6 +32,10 @@ module.exports = (sequelize) => {
             type: DataTypes.ENUM('professor', 'student','admin'),
             allowNull: false,
         },
+        status: {
+            type: DataTypes.ENUM("pending", "active", "disabled"),
+            defaultValue: "pending", // Par défaut, les profs doivent être validés
+        },
     });
 
     // Hash du mot de passe avant de sauvegarder
