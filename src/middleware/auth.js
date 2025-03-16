@@ -32,4 +32,18 @@ const isAdmin = async (req, res, next) => {
     }
 };
 
-module.exports = { verifyToken, isAdmin };
+const isProfessor = (req, res, next) => {
+    if (req.user.role !== "professor") {
+        return next(errorHandler(403, "Accès refusé : Professeur requis"));
+    }
+    next();
+};
+
+const isStudent = (req, res, next) => {
+    if (req.user.role !== "student") {
+        return next(errorHandler(403, "Accès refusé : Étudiant requis"));
+    }
+    next();
+};
+
+module.exports = { verifyToken, isAdmin, isStudent, isProfessor };
