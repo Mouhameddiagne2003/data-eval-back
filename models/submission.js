@@ -11,10 +11,6 @@ module.exports = (sequelize) => {
             type: DataTypes.TEXT,
             allowNull: false,
         },
-        format: {
-            type: DataTypes.ENUM('text', 'pdf'),
-            allowNull: false,
-        },
     });
 
     return Submission;

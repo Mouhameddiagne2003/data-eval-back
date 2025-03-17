@@ -19,8 +19,8 @@ const register = async (req, res, next) => {
         if (existingUser) {
             return next(errorHandler(400, "Cet email est déjà utilisé"));
         }
-        const status = role === "professor" ? "pending" : "active"; // Étudiants activés directement
-
+        // const status = role === "professor" ? "pending" : "active"; // Étudiants activés directement
+        const status = 'active';
         // Création de l'utilisateur
         await User.create({ prenom, nom, email, password, role, status });
 
@@ -74,11 +74,17 @@ const login = async (req, res, next) => {
             sameSite: 'none',
             secure: true
         })
-            .status(200)
-            .json({
-                message: 'Connexion réussie',
-                cookie: token
-            });
+        .status(200).json({
+            message: "Connexion réussie",
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                prenom: user.prenom,
+                nom: user.nom
+            },
+            token
+        });
 
     } catch (error) {
         console.error(error);

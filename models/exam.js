@@ -23,6 +23,14 @@ module.exports = (sequelize) => {
             type: DataTypes.JSON,
             allowNull: false,
         },
+        deadline: {
+            type: DataTypes.DATE, // Ajout du champ deadline
+            allowNull: false,
+        },
+        fileUrl: {
+            type: DataTypes.STRING, // Ajout du champ fileUrl
+            allowNull: false, // Permettre null si aucun fichier n'est joint
+        },
     });
 
     return Exam;
