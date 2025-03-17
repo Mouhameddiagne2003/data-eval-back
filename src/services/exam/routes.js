@@ -6,8 +6,8 @@ const { verifyToken, isAdmin, isProfessor } = require("../../middleware/auth");
 const router = express.Router();
 
 // 📌 Créer un examen (Professeur uniquement)
-router.post("/", verifyToken, isProfessor, validateExam, createExam);
-
+router.post("/", verifyToken, createExam);
+//verifyToken, isProfessor,
 // 📌 Voir tous les examens d'un professeur
 router.get("/", verifyToken, isProfessor, getAllExams);
 

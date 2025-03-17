@@ -1,9 +1,64 @@
-const Correction = require("../correction/schema");
+const {Correction} = require("../correction/schema");
 const deepSeekAI = require("../../utils/deepseek");
 const {errorHandler} = require("../../utils/errorHandler");
 const {Submission} = require("./schema")
 const {Exam} = require("../exam/schema")
 const {Grade} = require("../grade/schema")
+const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
+
+// const createSubmission = async (req, res, next) => {
+//     try {
+//         const { examId, content } = req.body;
+//         const studentId = req.user.id;
+//
+//         const exam = await Exam.findByPk(examId);
+//         if (!exam) return next(errorHandler(404, "Examen non trouvé"));
+//
+//         const correction = await Correction.findOne({ where: { examId } });
+//         if (!correction) return next(errorHandler(500, "Correction non trouvée"));
+//
+//         // 🔥 DeepSeek compare la soumission avec la correction de l'examen
+//         const { score, feedback, is_correct, suggestions } = await deepSeekAI.gradeSubmission(content, correction.content);
+//
+//         const submission = await Submission.create({
+//             studentId,
+//             examId,
+//             content,
+//         });
+//
+//         // 🔥 Enregistrer la note dans `Grades`
+//         await Grade.create({
+//             submissionId: submission.id,
+//             professorId: exam.professorId,
+//             score,
+//             feedback,
+//             is_correct,
+//             suggestions
+//         });
+//
+//         res.status(201).json({ message: "Soumission corrigée automatiquement", submission });
+//     } catch (error) {
+//         next(errorHandler(500, "Erreur lors de la soumission"));
+//     }
+// };
+//
+// //L’étudiant peut modifier sa soumission uniquement si l examen concerne est tjrs en cours
+// const updateSubmission = async (req, res, next) => {
+//     try {
+//         const { id } = req.params;
+//         const { content } = req.body;
+//
+//         const submission = await Submission.findByPk(id);
+//         if (!submission) return next(errorHandler(404, "Soumission non trouvée"));
+//
+//         await submission.update({ content });
+//
+//         res.status(200).json({ message: "Soumission mise à jour", submission });
+//     } catch (error) {
+//         next(errorHandler(500, "Erreur lors de la modification"));
+//     }
+// };
+
 
 const createSubmission = async (req, res, next) => {
     try {
@@ -13,19 +68,30 @@ const createSubmission = async (req, res, next) => {
         const exam = await Exam.findByPk(examId);
         if (!exam) return next(errorHandler(404, "Examen non trouvé"));
 
+        // Vérifier si une soumission existe déjà pour cet étudiant et cet examen
+        let submission = await Submission.findOne({
+            where: {
+                studentId,
+                examId
+            }
+        });
+
+        // Si la soumission existe, mettre à jour son contenu
+        const extractedText = await extractTextFromFile(content, req.file.mimetype);
+        if (submission) {
+            await submission.update({
+                extractedText,
+                status: 'submitted'
+            });
+        }
+
         const correction = await Correction.findOne({ where: { examId } });
         if (!correction) return next(errorHandler(500, "Correction non trouvée"));
 
-        // 🔥 DeepSeek compare la soumission avec la correction de l'examen
-        const { score, feedback, is_correct, suggestions } = await deepSeekAI.gradeSubmission(content, correction.content);
+        // DeepSeek compare la soumission avec la correction de l'examen
+        const { score, feedback, is_correct, suggestions } = await deepSeekAI.gradeSubmission(extractedText, correction.content);
 
-        const submission = await Submission.create({
-            studentId,
-            examId,
-            content,
-        });
-
-        // 🔥 Enregistrer la note dans `Grades`
+        // Enregistrer la note dans `Grades`
         await Grade.create({
             submissionId: submission.id,
             professorId: exam.professorId,
@@ -41,16 +107,28 @@ const createSubmission = async (req, res, next) => {
     }
 };
 
-//L’étudiant peut modifier sa soumission uniquement si l examen concerne est tjrs en cours
+// L'étudiant peut modifier sa soumission uniquement si l'examen concerné est toujours en cours
 const updateSubmission = async (req, res, next) => {
     try {
         const { id } = req.params;
         const { content } = req.body;
 
-        const submission = await Submission.findByPk(id);
+        const submission = await Submission.findByPk(id, {
+            include: [{ model: Exam }]
+        });
+
         if (!submission) return next(errorHandler(404, "Soumission non trouvée"));
 
-        await submission.update({ content });
+        // Vérifier si l'examen est toujours en cours
+        const now = new Date();
+        if (new Date(submission.Exam.deadline) < now) {
+            return next(errorHandler(403, "Impossible de modifier la soumission, l'examen est terminé"));
+        }
+
+        await submission.update({
+            content,
+            status: 'submitted'  // Mise à jour du statut
+        });
 
         res.status(200).json({ message: "Soumission mise à jour", submission });
     } catch (error) {
