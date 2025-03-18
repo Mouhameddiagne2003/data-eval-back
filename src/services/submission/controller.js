@@ -190,7 +190,6 @@ const getExamSubmissions = async (req, res, next) => {
 const getAvailableExamsForStudent = async (req, res, next) => {
     try {
         const studentId = req.user.id; // 🔥 ID de l’étudiant connecté
-
         // Récupérer les soumissions "assigned" de cet étudiant
         const pendingSubmissions = await Submission.findAll({
             where: { studentId, status: "assigned" },
