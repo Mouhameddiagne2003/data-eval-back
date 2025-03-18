@@ -1,9 +1,9 @@
-const {Correction} = require("../correction/schema");
+const Correction = require("../correction/schema");
 const deepSeekAI = require("../../utils/deepseek");
 const {errorHandler} = require("../../utils/errorHandler");
-const {Submission} = require("./schema")
-const {Exam} = require("../exam/schema")
-const {Grade} = require("../grade/schema")
+const Submission = require("./schema")
+const Exam = require("../exam/schema")
+const Grade = require("../grade/schema")
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
 
 // const createSubmission = async (req, res, next) => {
@@ -187,10 +187,44 @@ const getExamSubmissions = async (req, res, next) => {
 };
 
 
+const getAvailableExamsForStudent = async (req, res, next) => {
+    try {
+        const studentId = req.user.id; // 🔥 ID de l’étudiant connecté
+
+        // Récupérer les soumissions "assigned" de cet étudiant
+        const pendingSubmissions = await Submission.findAll({
+            where: { studentId, status: "assigned" },
+            include: [
+                {
+                    model: Exam,
+                    as: "exam",
+                    attributes: ["id", "title", "content", "deadline","fileUrl"], // 📌 On ne récupère que l'essentiel
+                }
+            ],
+        });
+
+        // Vérifier si l'étudiant a des examens assignés
+        if (!pendingSubmissions.length) {
+            return res.status(200).json([]); // Retourne une liste vide s’il n’a aucun examen en attente
+        }
+
+        // Extraire uniquement les examens des soumissions trouvées
+        const availableExams = pendingSubmissions.map(submission => submission.exam);
+
+        res.status(200).json(availableExams);
+    } catch (error) {
+        console.error("❌ Erreur lors de la récupération des examens disponibles :", error);
+        next(errorHandler(500, "Erreur lors de la récupération des examens disponibles."));
+    }
+};
 
 
 
 
-module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions};
+
+
+
+
+module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions, getAvailableExamsForStudent};
 
 
