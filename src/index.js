@@ -54,9 +54,7 @@ sequelize.sync() // Utiliser `alter: true` en dev pour ajuster sans perdre les d
     .then(() => console.log('Base de données synchronisée'))
     .catch((err) => console.error('Erreur de synchronisation:', err));
 
-// Routes Edge Store
-app.get("/edgestore/*", handler);
-app.post("/edgestore/*", handler);
+
 
 // Lancer le serveur
 app.listen(PORT, () => {
