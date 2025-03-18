@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const { User } = require('./schema');
+const User  = require('./schema');
 const { errorHandler } = require("../../utils/errorHandler");
 
 
@@ -17,7 +17,8 @@ const getAllUsers = async (req, res, next) => {
 // 📌 Récupérer un utilisateur par ID
 const getUserById = async (req, res, next) => {
     try {
-        const user = await User.findByPk(req.params.id, { attributes: { exclude: ['password'] } });
+        const { id } = req.params;
+        const user = await User.findOne({ where: { id: id } });
         if (!user) return next(errorHandler(404, "Utilisateur non trouvé"));
         res.status(200).json(user);
     } catch (error) {
@@ -82,6 +83,5 @@ const validateProfessor = async (req, res, next) => {
         next(errorHandler(500, "Erreur lors de la validation du professeur"));
     }
 };
-
 
 module.exports = { getAllUsers, getUserById, updateUser, deleteUser, validateProfessor };
