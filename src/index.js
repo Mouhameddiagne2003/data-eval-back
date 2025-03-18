@@ -5,6 +5,7 @@ const { sequelize } = require('../models');
 const authRoutes = require('./services/auth/routes');
 const userRoutes = require('./services/users/routes');
 const examRoutes = require('./services/exam/routes');
+const submissionRoutes = require('./services/submission/routes');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const { initEdgeStore } = require('@edgestore/server');
@@ -39,6 +40,7 @@ const handler = createEdgeStoreExpressHandler({ router: edgeStoreRouter });
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/exam', examRoutes);
+app.use('/api/submission', submissionRoutes);
 
 
 
