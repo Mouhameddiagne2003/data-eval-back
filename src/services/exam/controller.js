@@ -10,6 +10,9 @@ const Correction = require("../correction/schema");
 const Submission = require("../submission/schema")
 const deepSeekAI = require("../../utils/deepseek"); // Simule l'API DeepSeek
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor")
+const bucket = require("../../config/firebase"); // Importer Firebase Storage
+const PDFDocument = require('pdfkit');
+const axios = require("axios")
 
 
 // 📌 Créer un examen avec un fichier (PDF, Markdown, LaTeX)
@@ -228,4 +231,47 @@ const deleteExam = async (req, res, next) => {
     }
 };
 
-module.exports = { createExam, getAllExams, getExamById, updateExam, deleteExam, getAllExamsByAdmin };
+// 📂 Télécharger un fichier depuis Firebase et l’envoyer au client
+const downloadExamFile = async (req, res, next) => {
+    try {
+        // Récupérer le nom du fichier depuis les paramètres de la route
+        const fileName = req.params.fileName;
+
+        if (!fileName) {
+            return res.status(400).json({ error: "Nom du fichier manquant." });
+        }
+
+        // Construire l'URL Firebase complète
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/nbcmultiservices-9db9b.appspot.com/o/uploads%2Fdocuments%2F${fileName}?alt=media`;
+
+        console.log("URL de téléchargement :", fileUrl);
+
+        // Télécharger le fichier depuis l'URL Firebase
+        const response = await axios.get(fileUrl, {
+            responseType: 'arraybuffer',
+        });
+
+        // Déterminer le Content-Type approprié en fonction de l'extension
+        let contentType = 'text/plain'; // Par défaut
+
+        if (fileName.endsWith('.pdf')) {
+            contentType = 'application/pdf';
+        } else if (fileName.endsWith('.tex') || fileName.endsWith('.latex')) {
+            contentType = 'application/x-latex';
+        } else if (fileName.endsWith('.md') || fileName.endsWith('.markdown')) {
+            contentType = 'text/markdown';
+        }
+
+        // Configurer les headers pour le téléchargement
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Content-Type', contentType);
+
+        // Envoyer le fichier
+        res.send(response.data);
+    } catch (error) {
+        console.error("❌ Erreur lors du téléchargement :", error);
+        res.status(500).json({ error: "Erreur interne du serveur." });
+    }
+};
+
+module.exports = { createExam, getAllExams, getExamById, updateExam, deleteExam, getAllExamsByAdmin, downloadExamFile };
