@@ -105,13 +105,13 @@ ${correctSolution}
 \`\`\`
 
 Fournit ton évaluation au format JSON avec:
-1. Un score entre 0 et 100
-2. Un feedback détaillé expliquant les forces et faiblesses
+1. Un score entre 0 et 20. une note est un float
+2. Un feedback détaillé expliquant les forces et faiblesses. Le feedback est un champ texte
 3. Des suggestions d'amélioration spécifiques
 
 Format de réponse:
 {
-  "score": <nombre entre 0 et 100>,
+  "score": <nombre entre 0 et 20>,
   "feedback": "<feedback détaillé>",
   "is_correct": <true or false>,
   "suggestions": ["suggestion1", "suggestion2", ...]
