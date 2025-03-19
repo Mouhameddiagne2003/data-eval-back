@@ -13,7 +13,12 @@ const verifyToken = async (req, res, next) => {
 
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
+        console.log("before mid")
         next();
+
+
+
+
     } catch (error) {
         next(errorHandler(403, "Token invalide"));
     }

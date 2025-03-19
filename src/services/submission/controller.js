@@ -5,6 +5,7 @@ const Submission = require("./schema")
 const Exam = require("../exam/schema")
 const Grade = require("../grade/schema")
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
+const {processSubmissionCorrection} = require("../correction/correctionService");
 
 // const createSubmission = async (req, res, next) => {
 //     try {
@@ -108,31 +109,83 @@ const createSubmission = async (req, res, next) => {
 };
 
 // L'étudiant peut modifier sa soumission uniquement si l'examen concerné est toujours en cours
+// const updateSubmission = async (req, res, next) => {
+//     try {
+//         const { submissionId } = req.params;
+//         const { fileUrl, status } = req.body;
+//
+//         const submission = await Submission.findByPk(submissionId);
+//         if (!submission) {
+//             return next(errorHandler(404, "Soumission non trouvée"));
+//         }
+//
+//         if (submission.status === "graded") {
+//             return next(errorHandler(400, "L'examen a déjà été noté, vous ne pouvez plus soumettre."));
+//         }
+//
+//         submission.fileUrl = fileUrl || submission.fileUrl;
+//         submission.status = status || submission.status;
+//         await submission.save();
+//
+//         res.status(200).json({ message: "Soumission mise à jour avec succès", submission });
+//     } catch (error) {
+//         next(errorHandler(500, "Erreur lors de la mise à jour de la soumission"));
+//     }
+// };
+
 const updateSubmission = async (req, res, next) => {
     try {
-        const { id } = req.params;
-        const { content } = req.body;
+        const { submissionId } = req.params;
+        const { fileUrl, status } = req.body;
+        const submission = await Submission.findByPk(submissionId);
 
-        const submission = await Submission.findByPk(id, {
-            include: [{ model: Exam }]
-        });
-
-        if (!submission) return next(errorHandler(404, "Soumission non trouvée"));
-
-        // Vérifier si l'examen est toujours en cours
-        const now = new Date();
-        if (new Date(submission.Exam.deadline) < now) {
-            return next(errorHandler(403, "Impossible de modifier la soumission, l'examen est terminé"));
+        if (!submission) {
+            return next(errorHandler(404, "Soumission non trouvée"));
         }
 
-        await submission.update({
-            content,
-            status: 'submitted'  // Mise à jour du statut
-        });
+        if (submission.status === "graded") {
+            return next(errorHandler(400, "L'examen a déjà été noté, vous ne pouvez plus soumettre."));
+        }
 
-        res.status(200).json({ message: "Soumission mise à jour", submission });
+        // Si un nouveau fileUrl est fourni
+        if (fileUrl) {
+            // Mettre à jour l'URL du fichier
+            // submission.fileUrl = fileUrl;
+
+            // Changer le statut à "completed" pour indiquer que la soumission est complète
+            submission.content = fileUrl;
+            submission.status = "completed";
+            await submission.save();
+
+            // Répondre immédiatement au client
+            res.status(200).json({
+                message: "Soumission mise à jour avec succès. La correction est en cours...",
+                submission
+            });
+
+            // Lancer le processus de correction en arrière-plan (asynchrone)
+            console.log(`Début de la correction pour la soumission ${submissionId}`);
+
+            // Traitement asynchrone sans attendre
+            processSubmissionCorrection(submission, fileUrl)
+                .then((success) => {
+                    if (success) {
+                        console.log(`Correction terminée pour la soumission ${submissionId}`);
+                    } else {
+                        console.log(`Échec de la correction pour la soumission ${submissionId}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Erreur lors de la correction de la soumission ${submissionId}:`, error);
+                });
+        } else {
+            // Si seulement le status est mis à jour
+            submission.status = status || submission.status;
+            await submission.save();
+            res.status(200).json({ message: "Statut de la soumission mis à jour avec succès", submission });
+        }
     } catch (error) {
-        next(errorHandler(500, "Erreur lors de la modification"));
+        next(errorHandler(500, "Erreur lors de la mise à jour de la soumission: " + error.message));
     }
 };
 
@@ -217,13 +270,30 @@ const getAvailableExamsForStudent = async (req, res, next) => {
     }
 };
 
+const getSubmissionForStudent = async (req, res, next) => {
+    try {
+        const { examId, studentId } = req.query; // On récupère les paramètres depuis la requête
+
+        if (!examId || !studentId) {
+            return next(errorHandler(400, "ExamId et StudentId sont requis"));
+        }
+
+        // 🔍 Vérifier si une soumission existe pour cet étudiant et cet examen
+        const submission = await Submission.findOne({
+            where: { examId, studentId }
+        });
+
+        if (!submission) {
+            return next(errorHandler(404, "Aucune soumission trouvée pour cet examen et cet étudiant."));
+        }
+
+        res.status(200).json(submission);
+    } catch (error) {
+        next(errorHandler(500, "Erreur lors de la récupération de la soumission"));
+    }
+};
 
 
-
-
-
-
-
-module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions, getAvailableExamsForStudent};
+module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions, getAvailableExamsForStudent, getSubmissionForStudent};
 
 
