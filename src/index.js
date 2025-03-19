@@ -14,6 +14,15 @@ const { createEdgeStoreExpressHandler } = require('@edgestore/server/adapters/ex
 //const pool = require("./config/db");
 
 const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, {
+    cors: {
+        origin: "http://localhost:5173", // À ajuster selon le domaine du front
+        methods: ["GET", "POST"]
+    }
+});
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
@@ -32,8 +41,7 @@ const es = initEdgeStore.create();
 const edgeStoreRouter = es.router({
     publicFiles: es.fileBucket(),
 });
-// export type EdgeStoreRouter = typeof edgeStoreRouter;
-const handler = createEdgeStoreExpressHandler({ router: edgeStoreRouter });
+
 
 
 
@@ -57,8 +65,22 @@ sequelize.sync() // Utiliser `alter: true` en dev pour ajuster sans perdre les d
 
 
 // Lancer le serveur
-app.listen(PORT, () => {
-    console.log(`✅ Serveur lancé sur http://localhost:${PORT}`);
+// app.listen(PORT, () => {
+//     console.log(`✅ Serveur lancé sur http://localhost:${PORT}`);
+// });
+
+io.on("connection", (socket) => {
+    console.log("Nouvelle connexion WebSocket :", socket.id);
+
+    socket.on("disconnect", () => {
+        console.log("Un utilisateur s'est déconnecté");
+    });
+});
+
+global.io = io; // Rendre io accessible globalement pour l'utiliser dans l'API
+
+server.listen(PORT, () => {
+    console.log("Serveur démarré sur le port 5000");
 });
 
 

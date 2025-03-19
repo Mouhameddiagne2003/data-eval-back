@@ -4,61 +4,9 @@ const {errorHandler} = require("../../utils/errorHandler");
 const Submission = require("./schema")
 const Exam = require("../exam/schema")
 const Grade = require("../grade/schema")
+const User = require("../users/schema")
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
 const {processSubmissionCorrection} = require("../correction/correctionService");
-
-// const createSubmission = async (req, res, next) => {
-//     try {
-//         const { examId, content } = req.body;
-//         const studentId = req.user.id;
-//
-//         const exam = await Exam.findByPk(examId);
-//         if (!exam) return next(errorHandler(404, "Examen non trouvé"));
-//
-//         const correction = await Correction.findOne({ where: { examId } });
-//         if (!correction) return next(errorHandler(500, "Correction non trouvée"));
-//
-//         // 🔥 DeepSeek compare la soumission avec la correction de l'examen
-//         const { score, feedback, is_correct, suggestions } = await deepSeekAI.gradeSubmission(content, correction.content);
-//
-//         const submission = await Submission.create({
-//             studentId,
-//             examId,
-//             content,
-//         });
-//
-//         // 🔥 Enregistrer la note dans `Grades`
-//         await Grade.create({
-//             submissionId: submission.id,
-//             professorId: exam.professorId,
-//             score,
-//             feedback,
-//             is_correct,
-//             suggestions
-//         });
-//
-//         res.status(201).json({ message: "Soumission corrigée automatiquement", submission });
-//     } catch (error) {
-//         next(errorHandler(500, "Erreur lors de la soumission"));
-//     }
-// };
-//
-// //L’étudiant peut modifier sa soumission uniquement si l examen concerne est tjrs en cours
-// const updateSubmission = async (req, res, next) => {
-//     try {
-//         const { id } = req.params;
-//         const { content } = req.body;
-//
-//         const submission = await Submission.findByPk(id);
-//         if (!submission) return next(errorHandler(404, "Soumission non trouvée"));
-//
-//         await submission.update({ content });
-//
-//         res.status(200).json({ message: "Soumission mise à jour", submission });
-//     } catch (error) {
-//         next(errorHandler(500, "Erreur lors de la modification"));
-//     }
-// };
 
 
 const createSubmission = async (req, res, next) => {
@@ -107,31 +55,6 @@ const createSubmission = async (req, res, next) => {
         next(errorHandler(500, "Erreur lors de la soumission"));
     }
 };
-
-// L'étudiant peut modifier sa soumission uniquement si l'examen concerné est toujours en cours
-// const updateSubmission = async (req, res, next) => {
-//     try {
-//         const { submissionId } = req.params;
-//         const { fileUrl, status } = req.body;
-//
-//         const submission = await Submission.findByPk(submissionId);
-//         if (!submission) {
-//             return next(errorHandler(404, "Soumission non trouvée"));
-//         }
-//
-//         if (submission.status === "graded") {
-//             return next(errorHandler(400, "L'examen a déjà été noté, vous ne pouvez plus soumettre."));
-//         }
-//
-//         submission.fileUrl = fileUrl || submission.fileUrl;
-//         submission.status = status || submission.status;
-//         await submission.save();
-//
-//         res.status(200).json({ message: "Soumission mise à jour avec succès", submission });
-//     } catch (error) {
-//         next(errorHandler(500, "Erreur lors de la mise à jour de la soumission"));
-//     }
-// };
 
 const updateSubmission = async (req, res, next) => {
     try {
@@ -293,7 +216,61 @@ const getSubmissionForStudent = async (req, res, next) => {
     }
 };
 
+const getStudentResults = async (req, res, next) => {
+    try {
+        const studentId = req.user.id;
 
-module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions, getAvailableExamsForStudent, getSubmissionForStudent};
+        // 🔍 Récupérer toutes les soumissions de l'étudiant avec statut "completed" ou "graded"
+        const submissions = await Submission.findAll({
+            where: { studentId, status: ["completed", "graded"] },
+            include: [
+                {
+                    model: Exam,
+                    as: "exam",
+                    attributes: ["id", "title", "content", "fileUrl", "deadline"]
+                },
+                {
+                    model: Grade,
+                    as: "grade",
+                    attributes: ["score", "feedback"],
+                    include: [
+                        {
+                            model: User,
+                            as: "professor",
+                            attributes: ["prenom", "nom", "email"]
+                        }
+                    ]
+                }
+            ],
+            order: [["updatedAt", "DESC"]],
+        });
+
+        if (!submissions || submissions.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // 🛠️ Construire la réponse formatée
+        const formattedResults = submissions.map(submission => ({
+            id: submission.id,
+            examId: submission.exam.id,
+            title: submission.exam.title,
+            content: submission.exam.content,
+            submissionDate: submission.updatedAt,
+            status: submission.status,
+            submissionUrl: submission.fileUrl,
+            grade: submission.grade ? submission.grade.score : null,
+            feedback: submission.grade ? submission.grade.feedback : null,
+            professor: submission.grade ? `${submission.grade.professor.prenom} ${submission.grade.professor.nom}` : null,
+        }));
+
+        res.status(200).json(formattedResults);
+    } catch (error) {
+        console.error("❌ Erreur récupération des résultats :", error);
+        next(errorHandler(500, "Erreur lors de la récupération des résultats"));
+    }
+};
+
+
+module.exports = { createSubmission, updateSubmission, deleteSubmission, getStudentSubmissions, getSubmissionById, getExamSubmissions, getAvailableExamsForStudent, getSubmissionForStudent, getStudentResults};
 
 
