@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../services/auth/shema');
+const User = require('../services/auth/shema');
 const { errorHandler } = require('../utils/errorHandler');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'secret_jwt_key';

@@ -39,8 +39,4 @@ router.get("/:id", verifyToken, isStudent, getSubmissionById);
 // 📌 Voir toutes les soumissions d’un examen (Professeur)
 router.get("/exam/:id", verifyToken, isProfessor, getExamSubmissions);
 
-
-
-
-
 module.exports = router;

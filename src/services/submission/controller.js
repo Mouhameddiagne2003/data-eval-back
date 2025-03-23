@@ -5,6 +5,7 @@ const Submission = require("./schema")
 const Exam = require("../exam/schema")
 const Grade = require("../grade/schema")
 const User = require("../users/schema")
+const  {io}  = require("../../index");
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
 const {processSubmissionCorrection} = require("../correction/correctionService");
 
@@ -80,6 +81,9 @@ const updateSubmission = async (req, res, next) => {
             submission.status = "completed";
             await submission.save();
 
+            // ⚡ Envoi de l'événement WebSocket
+            global.io.emit("submissionUpdated", { submissionId, status: "completed" });
+
             // Répondre immédiatement au client
             res.status(200).json({
                 message: "Soumission mise à jour avec succès. La correction est en cours...",
@@ -94,6 +98,9 @@ const updateSubmission = async (req, res, next) => {
                 .then((success) => {
                     if (success) {
                         console.log(`Correction terminée pour la soumission ${submissionId}`);
+
+                        // ⚡ Envoi de l'événement WebSocket après correction
+                        global.io.emit("submissionUpdated", { submissionId, status: "graded" });
                     } else {
                         console.log(`Échec de la correction pour la soumission ${submissionId}`);
                     }
@@ -105,6 +112,11 @@ const updateSubmission = async (req, res, next) => {
             // Si seulement le status est mis à jour
             submission.status = status || submission.status;
             await submission.save();
+
+            // ⚡ Envoi de l'événement WebSocket si le statut est mis à jour
+            io.emit("submissionUpdated", { submissionId, status: submission.status });
+
+
             res.status(200).json({ message: "Statut de la soumission mis à jour avec succès", submission });
         }
     } catch (error) {
@@ -154,13 +166,29 @@ const getSubmissionById = async (req, res, next) => {
 const getExamSubmissions = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const submissions = await Submission.findAll({ where: { examId: id } });
+
+        const submissions = await Submission.findAll({
+            where: { examId: id },
+            include: [
+                {
+                    model: User,
+                    as: "student", // Association définie dans les modèles
+                    attributes: ["id", "prenom", "nom"] // Champs utiles de l'élève
+                },
+                {
+                    model: Grade,
+                    as: "grade", // Association définie dans les modèles
+                    attributes: ["score", "feedback"] // Champs utiles de la note
+                }
+            ]
+        });
 
         res.status(200).json(submissions);
     } catch (error) {
         next(errorHandler(500, "Erreur lors de la récupération des soumissions"));
     }
 };
+
 
 
 const getAvailableExamsForStudent = async (req, res, next) => {
@@ -184,8 +212,17 @@ const getAvailableExamsForStudent = async (req, res, next) => {
         }
 
         // Extraire uniquement les examens des soumissions trouvées
-        const availableExams = pendingSubmissions.map(submission => submission.exam);
-
+       // const availableExams = pendingSubmissions.map(submission => submission.exam);
+        // Transformer les données pour inclure submissionId
+        const availableExams = pendingSubmissions.map(sub => ({
+            submissionId: sub.id,  // 🔥 ID de la soumission (important pour les sockets)
+            examId: sub.exam.id,   // 📌 ID de l'examen
+            title: sub.exam.title,
+            content: sub.exam.content,
+            deadline: sub.exam.deadline,
+            fileUrl: sub.exam.fileUrl,
+            status: sub.status      // 📌 "assigned" au départ
+        }));
         res.status(200).json(availableExams);
     } catch (error) {
         console.error("❌ Erreur lors de la récupération des examens disponibles :", error);
@@ -222,7 +259,7 @@ const getStudentResults = async (req, res, next) => {
 
         // 🔍 Récupérer toutes les soumissions de l'étudiant avec statut "completed" ou "graded"
         const submissions = await Submission.findAll({
-            where: { studentId, status: ["completed", "graded"] },
+            where: { studentId, status: ['completed', 'graded'] },
             include: [
                 {
                     model: Exam,

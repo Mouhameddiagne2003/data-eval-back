@@ -86,6 +86,114 @@ Assure-toi de respecter rigoureusement les critères d'évaluation fournis par l
      * @param {string} correctSolution - La solution correcte fournie par le professeur
      * @returns {Promise<{score: number, feedback: string}>} - Score et feedback
      */
+//     async gradeSubmission(studentQuery, correctSolution) {
+//         const prompt = `
+// Tu es un évaluateur expert en SQL. Compare la requête de l'étudiant avec la solution correcte et évalue-la selon les critères suivants:
+// 1. Syntaxe correcte
+// 2. Résultat fonctionnellement équivalent
+// 3. Efficacité et optimisation
+// 4. Bonnes pratiques
+//
+// Requête de l'étudiant:
+// \`\`\`sql
+// ${studentQuery}
+// \`\`\`
+//
+// Solution correcte:
+// \`\`\`sql
+// ${correctSolution}
+// \`\`\`
+//
+// IMPORTANT: Ta réponse doit être UNIQUEMENT un objet JSON valide, sans texte avant ou après.
+// Format exact de la réponse:
+// {
+//   "score": <nombre décimal entre 0 et 20>,
+//   "feedback": "<texte détaillé expliquant l'évaluation>",
+//   "is_correct": <true ou false>,
+//   "suggestions": ["suggestion1", "suggestion2", ...]
+// }
+// `;
+//
+//         try {
+//             console.log('Envoi de la requête à DeepSeek...');
+//             const responseText = await this.generateResponse(prompt);
+//             console.log('Réponse reçue de DeepSeek:', responseText.substring(0, 100) + '...');
+//
+//             try {
+//                 // Tentative de parse du JSON complet
+//                 const cleanedResponse = responseText.trim();
+//                 console.log('Tentative de parse JSON sur:', cleanedResponse.substring(0, 100) + '...');
+//
+//                 const evaluation = JSON.parse(cleanedResponse);
+//                 console.log('Parsing JSON réussi:', evaluation);
+//
+//                 // Vérification des types et valeurs
+//                 if (typeof evaluation.score !== 'number') {
+//                     console.error('Le score n\'est pas un nombre:', evaluation.score);
+//                     evaluation.score = 0;
+//                 }
+//
+//                 if (typeof evaluation.feedback !== 'string') {
+//                     console.error('Le feedback n\'est pas une chaîne:', evaluation.feedback);
+//                     evaluation.feedback = String(evaluation.feedback);
+//                 }
+//
+//                 // Création d'un objet résultat propre
+//                 const result = {
+//                     score: evaluation.score,
+//                     feedback: evaluation.feedback,
+//                     is_correct: Boolean(evaluation.is_correct),
+//                     suggestions: Array.isArray(evaluation.suggestions) ? evaluation.suggestions : []
+//                 };
+//
+//                 console.log('Résultat final:', result);
+//                 return result;
+//             } catch (parseError) {
+//                 console.error('Erreur de parsing JSON:', parseError.message);
+//                 console.error('Réponse brute complète:', responseText);
+//
+//                 // Tentative d'extraction avec regex comme fallback
+//                 let jsonMatch = responseText.match(/(\{[\s\S]*\})/);
+//                 if (jsonMatch) {
+//                     console.log('Tentative d\'extraction avec regex:', jsonMatch[0]);
+//                     try {
+//                         const extractedEvaluation = JSON.parse(jsonMatch[0]);
+//                         console.log('Extraction réussie:', extractedEvaluation);
+//
+//                         return {
+//                             score: typeof extractedEvaluation.score === 'number' ? extractedEvaluation.score : 0,
+//                             feedback: typeof extractedEvaluation.feedback === 'string' ?
+//                                 extractedEvaluation.feedback :
+//                                 "Feedback extrait avec méthode alternative: " + String(extractedEvaluation.feedback),
+//                             is_correct: Boolean(extractedEvaluation.is_correct),
+//                             suggestions: Array.isArray(extractedEvaluation.suggestions) ?
+//                                 extractedEvaluation.suggestions : []
+//                         };
+//                     } catch (secondParseError) {
+//                         console.error('Échec de l\'extraction secondaire:', secondParseError.message);
+//                     }
+//                 }
+//
+//                 // Fallback en cas d'échec complet
+//                 return {
+//                     score: 0,
+//                     feedback: "Erreur lors du traitement de l'évaluation. La réponse du modèle n'était pas au format attendu.",
+//                     is_correct: false,
+//                     suggestions: []
+//                 };
+//             }
+//         } catch (error) {
+//             console.error('Erreur lors de l\'évaluation avec DeepSeek:', error);
+//             return {
+//                 score: 0,
+//                 feedback: "Erreur lors de l'évaluation automatique: " + error.message,
+//                 is_correct: false,
+//                 suggestions: []
+//             };
+//         }
+//     }
+
+
     async gradeSubmission(studentQuery, correctSolution) {
         const prompt = `
 Tu es un évaluateur expert en SQL. Compare la requête de l'étudiant avec la solution correcte et évalue-la selon les critères suivants:
@@ -104,51 +212,109 @@ Solution correcte:
 ${correctSolution}
 \`\`\`
 
-Fournit ton évaluation au format JSON avec:
-1. Un score entre 0 et 20. une note est un float
-2. Un feedback détaillé expliquant les forces et faiblesses. Le feedback est un champ texte
-3. Des suggestions d'amélioration spécifiques
-
-Format de réponse:
+IMPORTANT: Ta réponse doit être UNIQUEMENT un objet JSON valide, sans texte avant ou après, sans balises <think> ou autres.
+Format exact de la réponse:
 {
-  "score": <nombre entre 0 et 20>,
-  "feedback": "<feedback détaillé>",
-  "is_correct": <true or false>,
+  "score": <nombre décimal entre 0 et 20>,
+  "feedback": "<texte détaillé expliquant l'évaluation>",
+  "is_correct": <true ou false>,
   "suggestions": ["suggestion1", "suggestion2", ...]
 }
 `;
 
         try {
+            console.log('Envoi de la requête à DeepSeek...');
             const responseText = await this.generateResponse(prompt);
+            console.log('Réponse reçue de DeepSeek:', responseText.substring(0, 100) + '...');
 
-            // Extraction du JSON de la réponse
-            let jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                console.error('Format de réponse incorrect depuis DeepSeek:', responseText);
-                // Fallback en cas de réponse mal formatée
+            // Nettoyage des balises <think> et autres contenus non JSON
+            const cleanResponse = responseText
+                .replace(/<think>[\s\S]*?<\/think>/g, '') // Supprime les balises <think> et leur contenu
+                .replace(/```json|```/g, '')             // Supprime les marqueurs de code JSON
+                .trim();                                 // Supprime les espaces inutiles
+
+            console.log('Réponse nettoyée:', cleanResponse.substring(0, 100) + '...');
+
+            try {
+                // Tentative de parse du JSON nettoyé
+                const evaluation = JSON.parse(cleanResponse);
+                console.log('Parsing JSON réussi:', evaluation);
+
+                // Vérification et normalisation des données
+                const result = {
+                    score: typeof evaluation.score === 'number' ? evaluation.score : 0,
+                    feedback: typeof evaluation.feedback === 'string' ?
+                        evaluation.feedback : String(evaluation.feedback),
+                    is_correct: Boolean(evaluation.is_correct),
+                    suggestions: Array.isArray(evaluation.suggestions) ? evaluation.suggestions : []
+                };
+
+                console.log('Résultat final:', result);
+                return result;
+            } catch (parseError) {
+                console.error('Erreur de parsing JSON après nettoyage:', parseError.message);
+
+                // Extraction avec regex comme fallback
+                const jsonRegexPatterns = [
+                    /(\{[\s\S]*\})/,           // Regex standard pour capturer le JSON complet
+                    /```json([\s\S]*?)```/,     // Capture le JSON entre les backticks markdown
+                    /\{[\s\S]*?"score"[\s\S]*?\}/  // Capture un objet JSON contenant "score"
+                ];
+
+                for (const pattern of jsonRegexPatterns) {
+                    const match = responseText.match(pattern);
+                    if (match) {
+                        const potentialJson = match[1] || match[0];
+                        console.log('Tentative d\'extraction avec regex:', potentialJson.substring(0, 100) + '...');
+
+                        try {
+                            const extractedEvaluation = JSON.parse(potentialJson.trim());
+                            console.log('Extraction réussie:', extractedEvaluation);
+
+                            return {
+                                score: typeof extractedEvaluation.score === 'number' ? extractedEvaluation.score : 0,
+                                feedback: typeof extractedEvaluation.feedback === 'string' ?
+                                    extractedEvaluation.feedback : String(extractedEvaluation.feedback),
+                                is_correct: Boolean(extractedEvaluation.is_correct),
+                                suggestions: Array.isArray(extractedEvaluation.suggestions) ?
+                                    extractedEvaluation.suggestions : []
+                            };
+                        } catch (secondParseError) {
+                            console.error('Échec de l\'extraction avec pattern:', secondParseError.message);
+                            // Continue avec le prochain pattern
+                        }
+                    }
+                }
+
+                // Dernier recours : recherche de structure JSON partielle
+                const scoreMatch = responseText.match(/"score"\s*:\s*(\d+\.?\d*)/);
+                const feedbackMatch = responseText.match(/"feedback"\s*:\s*"([^"]+)"/);
+                const isCorrectMatch = responseText.match(/"is_correct"\s*:\s*(true|false)/);
+
+                if (scoreMatch) {
+                    console.log('Extraction partielle réussie avec score:', scoreMatch[1]);
+                    return {
+                        score: parseFloat(scoreMatch[1]),
+                        feedback: feedbackMatch ? feedbackMatch[1] : "Feedback extrait partiellement",
+                        is_correct: isCorrectMatch ? isCorrectMatch[1] === 'true' : false,
+                        suggestions: []
+                    };
+                }
+
+                // Fallback en cas d'échec complet
+                console.error('Tous les essais de parsing ont échoué');
                 return {
                     score: 0,
-                    feedback: "Erreur d'évaluation. Veuillez contacter un administrateur.",
+                    feedback: "Erreur lors du traitement de l'évaluation. La réponse du modèle n'était pas au format JSON attendu.",
                     is_correct: false,
                     suggestions: []
                 };
             }
-
-            const evaluation = JSON.parse(jsonMatch[0]);
-
-            // Renvoi des données pertinentes pour l'enregistrement
-            return {
-                score: evaluation.score,
-                feedback: evaluation.feedback,
-                is_correct: evaluation.is_correct || false,
-                suggestions: evaluation.suggestions || []
-            };
         } catch (error) {
-            console.error('Erreur lors de l\'évaluation avec DeepSeek:', error.message);
-            // Fallback en cas d'erreur
+            console.error('Erreur lors de l\'évaluation avec DeepSeek:', error);
             return {
                 score: 0,
-                feedback: "Erreur lors de l'évaluation automatique. Veuillez réessayer ou contacter un administrateur.",
+                feedback: "Erreur lors de l'évaluation automatique: " + error.message,
                 is_correct: false,
                 suggestions: []
             };
