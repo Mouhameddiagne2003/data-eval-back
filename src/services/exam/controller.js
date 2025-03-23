@@ -3,7 +3,6 @@ const Exam = require("./schema");
 const { errorHandler } = require("../../utils/errorHandler");
 // const { createEdgeStoreClient } = require("@edgestore/server");
 // const edgeStoreClient = createEdgeStoreClient();
-const edgeStoreClient = require("../../config/edgestore");
 const User = require("../users/schema")
 
 const Correction = require("../correction/schema");
