@@ -83,4 +83,6 @@ server.listen(PORT, () => {
     console.log("Serveur démarré sur le port 5000");
 });
 
+module.exports.io = io;
+
 

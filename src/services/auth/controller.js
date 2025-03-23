@@ -19,8 +19,7 @@ const register = async (req, res, next) => {
         if (existingUser) {
             return next(errorHandler(400, "Cet email est déjà utilisé"));
         }
-        // const status = role === "professor" ? "pending" : "active"; // Étudiants activés directement
-        const status = 'active';
+        const status = role === "admin" ? "active" : "pending"; // Étudiants activés directement
         // Création de l'utilisateur
         await User.create({ prenom, nom, email, password, role, status });
 
