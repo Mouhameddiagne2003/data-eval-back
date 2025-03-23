@@ -8,8 +8,7 @@ const router = express.Router();
 // 📌 Créer un examen (Professeur uniquement)
 router.post("/", verifyToken, createExam);
 //verifyToken, isProfessor,
-// 📌 Voir tous les examens d'un professeur
-router.get("/", verifyToken, isProfessor, getAllExams);
+
 
 router.get("/download/:fileName", downloadExamFile);
 
@@ -18,6 +17,9 @@ router.get("/all", verifyToken, isAdmin, getAllExams);
 
 // 📌 Voir un examen spécifique
 router.get("/:id", verifyToken, getExamById);
+
+// 📌 Voir tous les examens d'un professeur
+router.get("/", verifyToken, isProfessor, getAllExams);
 
 
 
