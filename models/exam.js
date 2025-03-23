@@ -16,7 +16,7 @@ module.exports = (sequelize) => {
             allowNull: false,
         },
         format: {
-            type: DataTypes.ENUM('text', 'markdown', 'latex', 'pdf'),
+            type: DataTypes.ENUM('application/pdf', 'text/plain', 'text/markdown', 'application/x-latex'),
             allowNull: false,
         },
         gradingCriteria: {
@@ -24,11 +24,11 @@ module.exports = (sequelize) => {
             allowNull: false,
         },
         deadline: {
-            type: DataTypes.DATE, // Ajout du champ deadline
+            type: DataTypes.DATE,
             allowNull: false,
         },
         fileUrl: {
-            type: DataTypes.STRING, // Ajout du champ fileUrl
+            type: DataTypes.STRING,
             allowNull: false, // Permettre null si aucun fichier n'est joint
         },
     });
