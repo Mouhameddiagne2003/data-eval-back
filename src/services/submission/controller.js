@@ -179,7 +179,8 @@ const getExamSubmissions = async (req, res, next) => {
                     model: Grade,
                     as: "grade", // Association définie dans les modèles
                     attributes: ["score", "feedback"] // Champs utiles de la note
-                }
+                },
+
             ]
         });
 
