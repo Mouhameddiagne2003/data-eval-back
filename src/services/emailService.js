@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 const sendAccountApprovalEmail = async (teacherEmail, Prenom, Nom) => {
     try {
         const mailOptions = {
-            from: 'votre-application@ecole.com',
+            from: `"Data-Eval" <${process.env.EMAIL_USER}>`,
             to: teacherEmail,
             subject: 'Votre compte a été approuvé',
             html: `
@@ -35,7 +35,34 @@ const sendAccountApprovalEmail = async (teacherEmail, Prenom, Nom) => {
     }
 };
 
+const sendWelcomeEmail = async (email, prenom, nom) => {
+    try {
+        const mailOptions = {
+            from: `"Data-Eval" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: "Bienvenue sur Data-Eval 🎉 - Accès à votre compte étudiant",
+            html: `
+                <h2>Bonjour ${prenom} ${nom},</h2>
+                <p>Bienvenue sur <strong>Data-Eval</strong>, la plateforme d'évaluation automatisée.</p>
+                <p>Votre compte a été créé avec succès. Voici vos informations de connexion :</p>
+                <ul>
+                    <li><strong>Identifiant :</strong> ${email}</li>
+                    <li><strong>Mot de passe :</strong> P@sser12345</li>
+                </ul>
+                <p>Veuillez vous connecter et changer votre mot de passe dès que possible.</p>
+                <p>Bonne chance pour vos examens !</p>
+                <p>L'équipe Data-Eval 🚀</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`📧 Email envoyé avec succès à ${to}`);
+    } catch (error) {
+        console.error(`❌ Erreur lors de l'envoi de l'email à ${to} :`, error);
+    }
+};
 module.exports = {
     sendAccountApprovalEmail,
+    sendWelcomeEmail
     // Vous pouvez ajouter d'autres fonctions d'envoi d'emails ici
 };

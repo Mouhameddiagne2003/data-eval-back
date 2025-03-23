@@ -4,6 +4,7 @@ const { errorHandler } = require("../../utils/errorHandler");
 // const { createEdgeStoreClient } = require("@edgestore/server");
 // const edgeStoreClient = createEdgeStoreClient();
 const User = require("../users/schema")
+const { sendWelcomeEmail } = require("../emailService");
 
 const Correction = require("../correction/schema");
 const Submission = require("../submission/schema")
@@ -48,75 +49,175 @@ const axios = require("axios")
 //     }
 // };
 
+// const createExam = async (req, res, next) => {
+//     try {
+//         const errors = validationResult(req);
+//         if (!errors.isEmpty()) return next(errorHandler(400, errors.array()));
+//
+//         console.log("Données reçues :", req.body);
+//
+//         // Extraire les données du corps de la requête
+//         const { title, content, deadline: deadlineString, gradingCriteria, students: studentsString, file, format} = req.body;
+//         const professorId = req.user.id;
+//
+//         // Convertir la chaîne `deadline` en objet Date
+//         const deadline = new Date(deadlineString);
+//
+//         // Vérifier si la conversion a réussi
+//         if (isNaN(deadline.getTime())) {
+//             return next(errorHandler(400, "Format de date invalide pour la deadline"));
+//         }
+//
+//         // Parser les étudiants (si présents)
+//         let students = [];
+//         if (studentsString) {
+//             try {
+//                 students = JSON.parse(studentsString); // Convertir la chaîne JSON en tableau
+//             } catch (error) {
+//                 console.error("Erreur lors du parsing des étudiants :", error);
+//                 return next(errorHandler(400, "Format des étudiants invalide"));
+//             }
+//         }
+//
+//         // Vérifier si un fichier est joint
+//         const fileUrl = req.file ? `/uploads/exams/${req.file.filename}` : null;
+//         const filePath = req.file ? `./uploads/exams/${req.file.filename}` : null;
+//
+//         // Créer l'examen
+//         const exam = await Exam.create({
+//             title,
+//             content,
+//             deadline,
+//             professorId,
+//             fileUrl: file,
+//             format,
+//             gradingCriteria
+//         });
+//
+//         // ✅ On répond immédiatement pour ne pas bloquer le front
+//         res.status(201).json({ message: "Examen en cours de création", exam });
+//
+//         // 🔥 Lancer la génération de la correction en arrière-plan
+//         processCorrection(exam);
+//
+//         let correctionContent = null;
+//
+//         if (file !== null) {
+//             // Extraire le texte du fichier selon son format
+//             const extractedText = await extractTextFromFile(file, format);
+//             correctionContent = await deepSeekAI.generateCorrection(extractedText, gradingCriteria);
+//
+//             console.log("bismillah")
+//
+//             // Stocker la correction en base
+//             await Correction.create({
+//                 examId: exam.id,
+//                 content: correctionContent,
+//             });
+//
+//             console.log("bismillah")
+//         }
+//
+//         // Traiter les étudiants
+//         if (students && Array.isArray(students)) {
+//             const studentIds = [];
+//
+//             for (const student of students) {
+//                 // Vérifier si l'étudiant existe déjà
+//                 let existingStudent = await User.findOne({ where: { email: student.email } });
+//
+//                 // Si l'étudiant n'existe pas, le créer
+//                 if (!existingStudent) {
+//                     existingStudent = await User.create({
+//                         email: student.email,
+//                         prenom: student.prenom,
+//                         nom: student.nom,
+//                         password: 'passer', // Mot de passe par défaut
+//                         role: 'student',
+//                         status: 'active'
+//                     });
+//
+//                     // 🎉 Envoyer un email de bienvenue avec les identifiants
+//                     await sendWelcomeEmail(existingStudent.email, existingStudent.prenom, existingStudent.nom);
+//                 }
+//
+//                 // Ajouter l'ID de l'étudiant à la liste
+//                 studentIds.push(existingStudent.id);
+//             }
+//
+//             // Créer des soumissions vides pour chaque étudiant
+//             const submissionPromises = studentIds.map(studentId =>
+//                 Submission.create({
+//                     studentId,
+//                     examId: exam.id,
+//                     content: " ", // Contenu initialement vide
+//                     status: 'assigned' // Statut initial
+//                 })
+//             );
+//
+//             await Promise.all(submissionPromises);
+//         }
+//
+//         res.status(201).json({ message: "Examen créé avec succès et assigné aux étudiants", exam });
+//     } catch (error) {
+//         console.error("Erreur lors de la création de l'examen :", error);
+//         next(errorHandler(500, "Erreur lors de la création de l'examen"));
+//     }
+// };
+
 const createExam = async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) return next(errorHandler(400, errors.array()));
 
-        console.log("Données reçues :", req.body);
+        console.log("📥 Données reçues :", req.body);
 
         // Extraire les données du corps de la requête
-        const { title, content, deadline: deadlineString, gradingCriteria, students: studentsString, file} = req.body;
+        const { title, content, deadline: deadlineString, gradingCriteria, students: studentsString, file, format } = req.body;
         const professorId = req.user.id;
 
-        // Convertir la chaîne `deadline` en objet Date
+        // 📌 Convertir la date de deadline
         const deadline = new Date(deadlineString);
-
-        // Vérifier si la conversion a réussi
         if (isNaN(deadline.getTime())) {
             return next(errorHandler(400, "Format de date invalide pour la deadline"));
         }
 
-        // Parser les étudiants (si présents)
+        // 📌 Parser les étudiants (si présents)
         let students = [];
         if (studentsString) {
             try {
-                students = JSON.parse(studentsString); // Convertir la chaîne JSON en tableau
+                students = JSON.parse(studentsString);
             } catch (error) {
-                console.error("Erreur lors du parsing des étudiants :", error);
+                console.error("❌ Erreur parsing étudiants :", error);
                 return next(errorHandler(400, "Format des étudiants invalide"));
             }
         }
 
-        // Vérifier si un fichier est joint
+        // 📌 Vérifier si un fichier est joint
         const fileUrl = req.file ? `/uploads/exams/${req.file.filename}` : null;
-        const filePath = req.file ? `./uploads/exams/${req.file.filename}` : null;
 
-        // Créer l'examen
+        // 📌 Créer l'examen immédiatement en BDD
         const exam = await Exam.create({
             title,
             content,
             deadline,
             professorId,
             fileUrl: file,
-            format : "text",
+            format,
             gradingCriteria
         });
 
-        let correctionContent = null;
+        // ✅ Répondre immédiatement au client (frontend redirigera vers un écran de chargement)
+        res.status(201).json({ message: "Examen en cours de création", exam });
 
-        if (file !== null) {
-            // Extraire le texte du fichier selon son format
-            const extractedText = await extractTextFromFile(file, "text/plain");
-            correctionContent = await deepSeekAI.generateCorrection(extractedText, gradingCriteria);
+        // 🔥 Lancer la génération de la correction en arrière-plan
+        await processCorrection(exam, file, format, gradingCriteria);
 
-            console.log("bismillah")
-
-            // Stocker la correction en base
-            await Correction.create({
-                examId: exam.id,
-                content: correctionContent,
-            });
-
-            console.log("bismillah")
-        }
-
-        // Traiter les étudiants
+        // 📌 Traiter les étudiants
         if (students && Array.isArray(students)) {
             const studentIds = [];
 
             for (const student of students) {
-                // Vérifier si l'étudiant existe déjà
                 let existingStudent = await User.findOne({ where: { email: student.email } });
 
                 // Si l'étudiant n'existe pas, le créer
@@ -125,44 +226,91 @@ const createExam = async (req, res, next) => {
                         email: student.email,
                         prenom: student.prenom,
                         nom: student.nom,
-                        password: 'passer', // Mot de passe par défaut
+                        password: 'passer',
                         role: 'student',
                         status: 'active'
                     });
+
+                    // 🎉 Envoyer un email de bienvenue
+                    await sendWelcomeEmail(existingStudent.email, existingStudent.prenom, existingStudent.nom);
                 }
 
-                // Ajouter l'ID de l'étudiant à la liste
                 studentIds.push(existingStudent.id);
             }
 
-            // Créer des soumissions vides pour chaque étudiant
-            const submissionPromises = studentIds.map(studentId =>
+            // 📌 Créer des soumissions vides
+            await Promise.all(studentIds.map(studentId =>
                 Submission.create({
                     studentId,
                     examId: exam.id,
-                    content: " ", // Contenu initialement vide
-                    status: 'assigned' // Statut initial
+                    content: " ",
+                    status: 'assigned'
                 })
-            );
-
-            await Promise.all(submissionPromises);
+            ));
         }
 
-        res.status(201).json({ message: "Examen créé avec succès et assigné aux étudiants", exam });
     } catch (error) {
-        console.error("Erreur lors de la création de l'examen :", error);
+        console.error("❌ Erreur lors de la création de l'examen :", error);
         next(errorHandler(500, "Erreur lors de la création de l'examen"));
     }
 };
+
+const processCorrection = async (exam, file, format, gradingCriteria) => {
+    try {
+        console.log(`🔄 Génération de la correction pour l'examen ${exam.id}...`);
+
+        let correctionContent = null;
+
+        if (file !== null) {
+            // 📌 Extraire le texte du fichier
+            const extractedText = await extractTextFromFile(file, format);
+
+            // 📌 Générer une correction avec DeepSeek AI
+            correctionContent = await deepSeekAI.generateCorrection(extractedText, gradingCriteria);
+
+            console.log("✅ Correction générée pour l'examen :", exam.id);
+
+            // 📌 Stocker la correction en tant que brouillon (draft)
+            const draftCorrection = await Correction.create({
+                examId: exam.id,
+                content: correctionContent,
+                 // Statut "brouillon"
+            });
+
+            // 📡 Notifier le professeur via WebSockets
+            io.emit(`correctionPending:${exam.professorId}`, {
+                message: "Votre correction est prête à être révisée.",
+                examId: exam.id,
+                correction: draftCorrection,
+            });
+        }
+
+    } catch (error) {
+        console.error(`❌ Erreur génération correction examen ${exam.id}:`, error);
+    }
+};
+
+
 // 📌 Voir tous les examens d’un professeur
 const getAllExams = async (req, res, next) => {
     try {
-        const exams = await Exam.findAll({ where: { professorId: req.user.id } });
+        const exams = await Exam.findAll({
+            where: { professorId: req.user.id },
+            include: [
+                {
+                    model: Correction,
+                    as: "correction", // Alias défini dans l'association
+                    attributes: ["id", "content", "createdAt"], // Récupérer uniquement les colonnes nécessaires
+                }
+            ]
+        });
+
         res.status(200).json(exams);
     } catch (error) {
         next(errorHandler(500, "Erreur lors de la récupération des examens"));
     }
 };
+
 
 // 📌 Voir tous les examens d’un professeur
 const getAllExamsByAdmin = async (req, res, next) => {
