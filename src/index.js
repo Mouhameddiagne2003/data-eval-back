@@ -19,8 +19,9 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:5173", // À ajuster selon le domaine du front
-        methods: ["GET", "POST"]
+        origin: "https://data-eval-frontend.onrender.com", // À ajuster selon le domaine du front
+        methods: ["GET", "POST"],
+        credentials: true,
     }
 });
 const PORT = process.env.PORT || 5000;
