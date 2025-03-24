@@ -1,4 +1,8 @@
-
+## 🚀 Test de badges
+| Service | Badge |
+|---------|-------|
+| Node.js | ![Node](https://img.shields.io/badge/Node.js-339933?logo=nodedotjs&logoColor=white) |
+| React | ![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black) |
 ---
 
 ### **README.md pour le Back-end (Express)**
