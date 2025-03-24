@@ -29,7 +29,10 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 // Par ceci:
 app.use(cors({
-    origin: 'http://localhost:5173', // L'URL exacte de votre frontend
+    origin: [
+        'https://data-eval-frontend.onrender.com',
+        'http://localhost:5173' // Pour le dev
+    ],
     credentials: true
 }));
 app.use(cookieParser());
