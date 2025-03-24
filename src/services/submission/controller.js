@@ -71,6 +71,14 @@ const updateSubmission = async (req, res, next) => {
             return next(errorHandler(400, "L'examen a déjà été noté, vous ne pouvez plus soumettre."));
         }
 
+        // Récupérer l'examen associé à la soumission pour obtenir le format
+        const exam = await Exam.findByPk(submission.examId);
+        if (!exam) {
+            return next(errorHandler(404, "Examen associé non trouvé"));
+        }
+
+        const format = exam.format;
+
         // Si un nouveau fileUrl est fourni
         if (fileUrl) {
             // Mettre à jour l'URL du fichier
@@ -94,7 +102,7 @@ const updateSubmission = async (req, res, next) => {
             console.log(`Début de la correction pour la soumission ${submissionId}`);
 
             // Traitement asynchrone sans attendre
-            processSubmissionCorrection(submission, fileUrl)
+            processSubmissionCorrection(submission, fileUrl, format)
                 .then((success) => {
                     if (success) {
                         console.log(`Correction terminée pour la soumission ${submissionId}`);

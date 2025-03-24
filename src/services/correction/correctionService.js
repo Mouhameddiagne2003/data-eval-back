@@ -7,10 +7,10 @@ const deepSeekAI = require('../../utils/deepseek');
 const { extractTextFromFile } = require('../../services/fileExtractor/fileExtractor');
 
 
-const processSubmissionCorrection = async (submission, fileUrl) => {
+const processSubmissionCorrection = async (submission, fileUrl, format) => {
     try {
         // Extraire le texte du fichier PDF
-        const extractedText = await extractTextFromFile(fileUrl, 'application/pdf');
+        const extractedText = await extractTextFromFile(fileUrl, format);
         console.log(`Texte extrait pour la soumission ${submission.id}`);
 
         // Récupérer l'examen associé
