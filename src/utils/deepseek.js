@@ -1,32 +1,73 @@
 const axios = require('axios');
 
 // Configuration pour l'API Ollama
-const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434/api';
-const MODEL_NAME = process.env.DEEPSEEK_MODEL || 'deepseek-r1:1.5b';
+// const OLLAMA_API_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434/api';
+// const MODEL_NAME = process.env.DEEPSEEK_MODEL || 'deepseek-r1:1.5b';
+
+// class DeepSeekAI {
+//     constructor() {
+//         this.apiUrl = OLLAMA_API_URL;
+//         this.model = MODEL_NAME;
+//     }
+//
+//     /**
+//      * Envoie une requête à l'API Ollama
+//      * @param {string} prompt - Le prompt à envoyer au modèle
+//      * @returns {Promise<string>} - La réponse du modèle
+//      */
+//     async generateResponse(prompt) {
+//         try {
+//             const response = await axios.post(`${this.apiUrl}/generate`, {
+//                 model: this.model,
+//                 prompt,
+//                 stream: false
+//             });
+//
+//             return response.data.response;
+//         } catch (error) {
+//             console.error('Erreur lors de la communication avec Ollama:', error.message);
+//             throw new Error('Échec de la communication avec le service d\'IA');
+//         }
+//     }
+
+
+// Configuration pour OpenRouter
+const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || "https://openrouter.ai/api/v1";
+const API_KEY = process.env.OPENROUTER_API_KEY;
+const MODEL_NAME = process.env.DEEPSEEK_MODEL || "deepseek-coder";
 
 class DeepSeekAI {
     constructor() {
-        this.apiUrl = OLLAMA_API_URL;
+        this.apiUrl = OPENROUTER_API_URL;
         this.model = MODEL_NAME;
     }
 
     /**
-     * Envoie une requête à l'API Ollama
+     * Envoie une requête à l'API OpenRouter
      * @param {string} prompt - Le prompt à envoyer au modèle
      * @returns {Promise<string>} - La réponse du modèle
      */
     async generateResponse(prompt) {
         try {
-            const response = await axios.post(`${this.apiUrl}/generate`, {
-                model: this.model,
-                prompt,
-                stream: false
-            });
+            const response = await axios.post(
+                `${this.apiUrl}/chat/completions`,
+                {
+                    model: this.model,
+                    messages: [{ role: "system", content: "Tu es un assistant intelligent pour l'évaluation d'examens SQL." },
+                        { role: "user", content: prompt }]
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`,
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
 
-            return response.data.response;
+            return response.data.choices[0].message.content;
         } catch (error) {
-            console.error('Erreur lors de la communication avec Ollama:', error.message);
-            throw new Error('Échec de la communication avec le service d\'IA');
+            console.error("Erreur lors de la communication avec OpenRouter:", error.message);
+            throw new Error("Échec de la communication avec OpenRouter.");
         }
     }
 

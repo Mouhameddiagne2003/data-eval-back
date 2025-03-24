@@ -1,8 +1,20 @@
 const { Sequelize } = require('sequelize');
 // const sequelize = require('../config/config.json'); // Assure-toi d'avoir la bonne configuration Sequelize
-const sequelize = new Sequelize('data_eval', 'postgres', 'passer', {
-  host: 'localhost',
-  dialect: 'postgres', // Assurez-vous que c'est le bon dialecte
+// const sequelize = new Sequelize('data_eval', 'postgres', 'passer', {
+//   host: 'localhost',
+//   dialect: 'postgres', // Assurez-vous que c'est le bon dialecte
+// });
+
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Nécessaire pour Railway
+    }
+  },
+  logging: process.env.NODE_ENV === 'development' ? console.log : false
 });
 
 module.exports = sequelize;

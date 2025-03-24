@@ -164,9 +164,9 @@ const axios = require("axios")
 //         next(errorHandler(500, "Erreur lors de la création de l'examen"));
 //     }
 // };
-
 const createExam = async (req, res, next) => {
     try {
+        // Validation des données d'entrée
         const errors = validationResult(req);
         if (!errors.isEmpty()) return next(errorHandler(400, errors.array()));
 
@@ -193,31 +193,20 @@ const createExam = async (req, res, next) => {
             }
         }
 
-        // 📌 Vérifier si un fichier est joint
-        const fileUrl = req.file ? `/uploads/exams/${req.file.filename}` : null;
-
-        // 📌 Créer l'examen immédiatement en BDD
+        // 📌 Créer l'examen en BDD avec file tel quel (URL déjà fournie)
         const exam = await Exam.create({
             title,
             content,
             deadline,
             professorId,
-            fileUrl: file,
+            fileUrl: file,  // Conserver file comme dans le code d'origine
             format,
             gradingCriteria
         });
 
-        // ✅ Répondre immédiatement au client (frontend redirigera vers un écran de chargement)
-        res.status(201).json({ message: "Examen en cours de création", exam });
-
-        // 🔥 Lancer la génération de la correction en arrière-plan
-        await processCorrection(exam, file, format, gradingCriteria);
-
-        // 📌 Traiter les étudiants
+        // 📌 Traiter les étudiants et créer les soumissions AVANT de lancer processCorrection
         if (students && Array.isArray(students)) {
-            const studentIds = [];
-
-            for (const student of students) {
+            const studentPromises = students.map(async (student) => {
                 let existingStudent = await User.findOne({ where: { email: student.email } });
 
                 // Si l'étudiant n'existe pas, le créer
@@ -226,28 +215,46 @@ const createExam = async (req, res, next) => {
                         email: student.email,
                         prenom: student.prenom,
                         nom: student.nom,
-                        password: 'passer',
+                        password: 'P@asser12345',
                         role: 'student',
                         status: 'active'
                     });
 
                     // 🎉 Envoyer un email de bienvenue
-                    await sendWelcomeEmail(existingStudent.email, existingStudent.prenom, existingStudent.nom);
+                    try {
+                        await sendWelcomeEmail(existingStudent.email, existingStudent.prenom, existingStudent.nom);
+                    } catch (emailError) {
+                        console.error("⚠️ Erreur lors de l'envoi de l'email de bienvenue:", emailError);
+                        // Continuer même si l'email échoue
+                    }
                 }
 
-                studentIds.push(existingStudent.id);
-            }
-
-            // 📌 Créer des soumissions vides
-            await Promise.all(studentIds.map(studentId =>
-                Submission.create({
-                    studentId,
+                // Créer la soumission
+                return Submission.create({
+                    studentId: existingStudent.id,
                     examId: exam.id,
                     content: " ",
                     status: 'assigned'
-                })
-            ));
+                });
+            });
+
+            // Attendre que toutes les soumissions soient créées
+            await Promise.all(studentPromises);
         }
+
+        // ✅ Répondre au client
+        res.status(201).json({
+            success: true,
+            message: "Examen créé avec succès",
+            exam
+        });
+
+        // 🔥 Lancer la génération de la correction en arrière-plan APRÈS avoir répondu au client
+        processCorrection(exam, file, format, gradingCriteria)
+            .catch(error => {
+                console.error("❌ Erreur lors du traitement de la correction :", error);
+                // Gérer l'erreur de correction en arrière-plan
+            });
 
     } catch (error) {
         console.error("❌ Erreur lors de la création de l'examen :", error);
