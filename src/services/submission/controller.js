@@ -5,6 +5,7 @@ const Submission = require("./schema")
 const Exam = require("../exam/schema")
 const Grade = require("../grade/schema")
 const User = require("../users/schema")
+const { Op } = require('sequelize');
 const  {io}  = require("../../index");
 const {extractTextFromFile} = require("../fileExtractor/fileExtractor");
 const {processSubmissionCorrection} = require("../correction/correctionService");
@@ -83,9 +84,10 @@ const updateSubmission = async (req, res, next) => {
         if (fileUrl) {
             // Mettre à jour l'URL du fichier
             // submission.fileUrl = fileUrl;
-
+           // const extractedText = await extractTextFromFile(fileUrl, format);
             // Changer le statut à "completed" pour indiquer que la soumission est complète
             submission.content = fileUrl;
+            console.log(submission.content)
             submission.status = "completed";
             await submission.save();
 
@@ -100,6 +102,8 @@ const updateSubmission = async (req, res, next) => {
 
             // Lancer le processus de correction en arrière-plan (asynchrone)
             console.log(`Début de la correction pour la soumission ${submissionId}`);
+
+
 
             // Traitement asynchrone sans attendre
             processSubmissionCorrection(submission, fileUrl, format)
@@ -205,7 +209,9 @@ const getAvailableExamsForStudent = async (req, res, next) => {
         const studentId = req.user.id; // 🔥 ID de l’étudiant connecté
         // Récupérer les soumissions "assigned" de cet étudiant
         const pendingSubmissions = await Submission.findAll({
-            where: { studentId, status: "assigned" },
+            where: { studentId, status: "assigned", examId: {
+                    [Op.not]: null  // Utiliser l'opérateur NOT NULL
+                } },
             include: [
                 {
                     model: Exam,

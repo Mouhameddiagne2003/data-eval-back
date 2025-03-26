@@ -91,5 +91,40 @@ const login = async (req, res, next) => {
     }
 };
 
+const logout = async (req, res, next) => {
+    try {
+        res.clearCookie("access_token", {
+            httpOnly: true, // Même option que lors de la création
+            path: '/',      // Spécifie le chemin du cookie (par défaut à la racine)
+        });
+        res.status(200).json('User has been logged out!');
+    } catch (error) {
+        next(error);
+    }
+};
 
-module.exports = { register, login};
+const getCurrentUser = async (req, res, next) => {
+    try {
+        // Vérifier si l'utilisateur est authentifié via le token dans les cookies
+        if (!req.user) {
+            return res.status(401).json({ message: "Non authentifié" });
+        }
+
+        // Récupérer les infos de l'utilisateur depuis la base de données
+        const user = await User.findByPk(req.user.id, {
+            attributes: ["id", "prenom", "nom", "email", "role"],
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur introuvable" });
+        }
+
+        res.status(200).json(user);
+    } catch (error) {
+        next(error);
+    }
+};
+
+
+
+module.exports = { register, login, logout,  getCurrentUser};

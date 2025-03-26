@@ -1,4 +1,11 @@
-require("dotenv").config();
+const fs = require('fs');
+const path = require('path');
+// 1. Configuration du chemin des variables d'environnement
+const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
+const envPath = path.resolve(__dirname, '../', envFile);
+if (fs.existsSync(envPath)) {
+    require('dotenv').config({ path: envPath });
+}
 const express = require("express");
 const cors = require("cors");
 const { sequelize } = require('../models');
@@ -9,9 +16,7 @@ const submissionRoutes = require('./services/submission/routes');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const { initEdgeStore } = require('@edgestore/server');
-const { createEdgeStoreExpressHandler } = require('@edgestore/server/adapters/express');
-//const morgan = require("morgan");
-//const pool = require("./config/db");
+
 
 const app = express();
 const http = require('http');
@@ -19,7 +24,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server, {
     cors: {
-        origin: "https://data-eval-frontend.onrender.com", // À ajuster selon le domaine du front
+        origin: process.env.VITE_URL, // À ajuster selon le domaine du front
         methods: ["GET", "POST"],
         credentials: true,
     }

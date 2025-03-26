@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../services/auth/shema');
 const { errorHandler } = require('../utils/errorHandler');
 
-const SECRET_KEY = process.env.JWT_SECRET || 'secret_jwt_key';
+const SECRET_KEY = "xyxzFIqoD5quJOlmNXbNMHPQiIdFRGGj" || 'secret_jwt_key';
 
 // 📌 Vérifier le token JWT
 const verifyToken = async (req, res, next) => {
@@ -13,10 +13,8 @@ const verifyToken = async (req, res, next) => {
 
         const decoded = jwt.verify(token, SECRET_KEY);
         req.user = decoded;
-        console.log("before mid")
+        console.log(req.user)
         next();
-
-
 
 
     } catch (error) {
@@ -45,6 +43,7 @@ const isProfessor = (req, res, next) => {
 };
 
 const isStudent = (req, res, next) => {
+    console.log(req.user)
     if (req.user.role !== "student") {
         return next(errorHandler(403, "Accès refusé : Étudiant requis"));
     }
