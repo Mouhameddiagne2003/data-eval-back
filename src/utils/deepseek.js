@@ -85,32 +85,45 @@ class DeepSeekAI {
         }
 
         const prompt = `
-Tu es un expert en bases de données chargé de générer une correction détaillée pour cet examen.
-Analyse le contenu suivant qui a été extrait d'un document d'examen de base de données (SQL, modélisation, etc.), 
-puis génère une correction complète et précise en respectant scrupuleusement les critères d'évaluation fournis.
+Tu es un **correcteur expert en bases de données**, spécialisé dans l'élaboration de corrections d'examens.  
+Tu dois générer une **correction détaillée et pédagogique** à partir du contenu de l'examen fourni.  
 
-CONTENU DE L'EXAMEN:
+📌 **IMPORTANT :**  
+- **Tu dois répondre exclusivement en français**.  
+- **Formate ta correction de manière structurée**, avec des explications claires pour chaque question.  
+- **La note par défaut est sur 20**, mais le professeur peut avoir défini un barème différent (ex: /40, /100).  
+  Tu dois toujours **ajuster l'évaluation en fonction du barème fourni** pour garantir une notation cohérente.  
+
+🔎 **CONTENU DE L'EXAMEN :**  
 ${extractedText}
 
-CRITÈRES D'ÉVALUATION ET BARÈME:
+📌 **CRITÈRES D'ÉVALUATION ET BARÈME :**  
 ${criteriaText}
 
-Pour chaque exercice ou question SQL:
-1. Fournis la requête SQL correcte
-2. Explique la logique derrière la construction de la requête
-3. Commente les points importants (jointures, groupements, conditions, etc.)
-4. Si pertinent, suggère des optimisations possibles
-5. Attribue des points selon le barème fourni, en justifiant l'attribution
+---
 
-Pour les questions de modélisation:
-1. Propose un schéma relationnel correct
-2. Explique les choix de conception (clés primaires, étrangères, etc.)
-3. Justifie la normalisation choisie
-4. Attribue des points selon le barème fourni
+📝 **🔹 Structure attendue pour la correction :**  
 
-Ta correction doit être structurée et formatée pour être facilement compréhensible par des étudiants.
-Assure-toi de respecter rigoureusement les critères d'évaluation fournis par le professeur.
+### **1️⃣ Questions SQL**  
+- **Requête correcte** : Fournis la solution SQL optimale.  
+- **Explication détaillée** : Décris la logique de la requête, ses étapes et son fonctionnement.  
+- **Commentaires techniques** : Explique les jointures, les groupements, l'optimisation de la requête.  
+- **Erreurs courantes** : Indique les erreurs fréquentes et comment les éviter.  
+- **Notation** : Attribue des points **en respectant le barème spécifié**.  
+
+### **2️⃣ Questions de modélisation**  
+- **Schéma relationnel** : Propose le modèle correct avec les entités et relations appropriées.  
+- **Explication des choix** : Justifie les clés primaires, étrangères et la normalisation appliquée.  
+- **Correction des erreurs courantes** : Précise les fautes classiques et comment les éviter.  
+- **Notation** : Ajuste la note selon le barème fourni par le professeur.  
+
+---
+
+🎯 **Objectif** :  
+Fournis une **correction complète, structurée et pédagogique** pour chaque question, en expliquant **pourquoi** une réponse est correcte ou incorrecte.  
+Respecte les critères d'évaluation fournis par le professeur, **en adaptant l'attribution des points au barème défini**.  
 `;
+
 
         try {
             const correctionContent = await this.generateResponse(prompt);
@@ -121,12 +134,7 @@ Assure-toi de respecter rigoureusement les critères d'évaluation fournis par l
         }
     }
 
-    /**
-     * Évalue une soumission SQL par rapport à une correction
-     * @param {string} studentQuery - La requête SQL soumise par l'étudiant
-     * @param {string} correctSolution - La solution correcte fournie par le professeur
-     * @returns {Promise<{score: number, feedback: string}>} - Score et feedback
-     */
+
 //     async gradeSubmission(studentQuery, correctSolution) {
 //         const prompt = `
 // Tu es un évaluateur expert en SQL. Compare la requête de l'étudiant avec la solution correcte et évalue-la selon les critères suivants:
@@ -235,33 +243,55 @@ Assure-toi de respecter rigoureusement les critères d'évaluation fournis par l
 //     }
 
 
-    async gradeSubmission(studentQuery, correctSolution) {
+    async gradeSubmission(studentQuery, correctSolution, examContent) {
         const prompt = `
-Tu es un évaluateur expert en SQL. Compare la requête de l'étudiant avec la solution correcte et évalue-la selon les critères suivants:
-1. Syntaxe correcte
-2. Résultat fonctionnellement équivalent
-3. Efficacité et optimisation
-4. Bonnes pratiques
+Tu es un correcteur expert en **SQL et bases de données**, spécialisé dans **l'évaluation des copies d'examen**.  
+Ta mission est de comparer la **réponse soumise par l'étudiant** avec **la correction officielle** et **le contexte de l'examen**, afin de lui attribuer une **note juste et pédagogique**.
 
-Requête de l'étudiant:
+📌 **IMPORTANT :**  
+- **Tu dois répondre exclusivement en français**.  
+- **Ta réponse doit être **précise et formatée en JSON strict** (pas de texte en dehors de l'objet JSON).  
+- **N'attribue pas 0 automatiquement** sauf si la réponse est vide ou complètement hors sujet.  
+
+🔎 **Contexte de l'examen** :
+\`\`\`
+${examContent}
+\`\`\`
+
+📝 **Réponse de l'étudiant** :
 \`\`\`sql
 ${studentQuery}
 \`\`\`
 
-Solution correcte:
+✅ **Correction officielle** :
 \`\`\`sql
 ${correctSolution}
 \`\`\`
 
-IMPORTANT: Ta réponse doit être UNIQUEMENT un objet JSON valide, sans texte avant ou après, sans balises <think> ou autres.
-Format exact de la réponse:
+📌 **Critères de notation** :
+1️⃣ **Pertinence** : La requête répond-elle à la question posée dans l'examen ?  
+2️⃣ **Exactitude** : Le résultat est-il identique à la correction officielle ?  
+3️⃣ **Syntaxe SQL** : La requête est-elle correcte et exécutable sans erreur ?  
+4️⃣ **Optimisation** : Utilise-t-elle les bonnes pratiques (indexation, jointures, etc.) ?  
+5️⃣ **Clarté** : La requête est-elle bien structurée et lisible ?  
+
+📌 **Format JSON attendu (strictement respecter ce format)** :
 {
-  "score": <nombre décimal entre 0 et 20>,
-  "feedback": "<texte détaillé expliquant l'évaluation>",
+  "score": <nombre entre 0 et 20 (ou selon le barème de l'examen)>,
+  "feedback": "<Explication pédagogique détaillée, avec des conseils d'amélioration>",
   "is_correct": <true ou false>,
-  "suggestions": ["suggestion1", "suggestion2", ...]
+  "suggestions": [
+    "Suggestion détaillée pour améliorer la requête",
+    "Autre conseil pertinent"
+  ]
 }
+
+🎯 **Objectif** :  
+- Fournir **une correction détaillée et pédagogique** en expliquant **les points forts et les erreurs**.  
+- Ne pas pénaliser fortement si la requête est correcte mais mal optimisée, donner plutôt un **feedback constructif**.  
+- Vérifier si la requête répond bien **au contexte de l'examen** et pas seulement à la correction brute.  
 `;
+
 
         try {
             console.log('Envoi de la requête à DeepSeek...');
@@ -283,7 +313,7 @@ Format exact de la réponse:
 
                 // Vérification et normalisation des données
                 const result = {
-                    score: typeof evaluation.score === 'number' ? evaluation.score : 0,
+                    score: typeof evaluation.score === 'number' ? evaluation.score : -1,
                     feedback: typeof evaluation.feedback === 'string' ?
                         evaluation.feedback : String(evaluation.feedback),
                     is_correct: Boolean(evaluation.is_correct),
@@ -313,7 +343,7 @@ Format exact de la réponse:
                             console.log('Extraction réussie:', extractedEvaluation);
 
                             return {
-                                score: typeof extractedEvaluation.score === 'number' ? extractedEvaluation.score : 0,
+                                score: typeof extractedEvaluation.score === 'number' ? extractedEvaluation.score : -1,
                                 feedback: typeof extractedEvaluation.feedback === 'string' ?
                                     extractedEvaluation.feedback : String(extractedEvaluation.feedback),
                                 is_correct: Boolean(extractedEvaluation.is_correct),
@@ -345,7 +375,7 @@ Format exact de la réponse:
                 // Fallback en cas d'échec complet
                 console.error('Tous les essais de parsing ont échoué');
                 return {
-                    score: 0,
+                    score: -1,
                     feedback: "Erreur lors du traitement de l'évaluation. La réponse du modèle n'était pas au format JSON attendu.",
                     is_correct: false,
                     suggestions: []
@@ -354,7 +384,7 @@ Format exact de la réponse:
         } catch (error) {
             console.error('Erreur lors de l\'évaluation avec DeepSeek:', error);
             return {
-                score: 0,
+                score: -1,
                 feedback: "Erreur lors de l'évaluation automatique: " + error.message,
                 is_correct: false,
                 suggestions: []

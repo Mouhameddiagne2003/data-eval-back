@@ -1,12 +1,14 @@
 const express = require("express");
-const { createExam, getAllExams, getExamById, updateExam, deleteExam, downloadExamFile} = require("./controller");
+const { createExam, getAllExams, getExamById, updateExam, deleteExam, downloadExamFile,createExamCorrection} = require("./controller");
 const { validateExam } = require("./validation");
 const { verifyToken, isAdmin, isProfessor } = require("../../middleware/auth");
 
 const router = express.Router();
 
+router.post("/:examId/correction", verifyToken, isProfessor, createExamCorrection);
+
 // 📌 Créer un examen (Professeur uniquement)
-router.post("/", verifyToken, createExam);
+router.post("/", verifyToken, isProfessor, createExam);
 //verifyToken, isProfessor,
 
 

@@ -297,17 +297,33 @@ const processCorrection = async (exam, file, format, gradingCriteria) => {
       console.log("✅ Correction générée pour l'examen :", exam.id);
 
       // 📌 Stocker la correction en tant que brouillon (draft)
-      const draftCorrection = await Correction.create({
-        examId: exam.id,
-        content: correctionContent,
-        // Statut "brouillon"
-      });
+      // const draftCorrection = await Correction.create({
+      //   examId: exam.id,
+      //   content: correctionContent,
+      //   // Statut "brouillon"
+      // });
+
+      // 🔥 Nettoyage du texte généré
+      correctionContent = correctionContent
+          .replace(/###/g, '') // Supprime les titres Markdown
+          .replace(/\*\*/g, '') // Supprime les **gras**
+          .replace(/```json|```/g, '') // Supprime les blocs de code JSON
+          .trim();
+
+      // 🔥 Vérification JSON
+      try {
+        JSON.parse(JSON.stringify({ correction: correctionContent }));
+      } catch (error) {
+        console.error("❌ Erreur JSON détectée, transformation en texte brut :", error);
+        correctionContent = correctionContent.replace(/["']/g, ""); // Supprimer les guillemets erronés
+      }
+
 
       // 📡 Notifier le professeur via WebSockets
       io.emit(`correctionPending:${exam.professorId}`, {
         message: "Votre correction est prête à être révisée.",
         examId: exam.id,
-        correction: draftCorrection,
+        correction: correctionContent,
       });
     }
   } catch (error) {
@@ -455,6 +471,48 @@ const downloadExamFile = async (req, res, next) => {
   }
 };
 
+const createExamCorrection = async (req, res, next) => {
+  try {
+    const { examId } = req.params;
+    let { content } = req.body;
+    const professorId = req.user.id;
+
+    // Vérifier si l'examen existe
+    const exam = await Exam.findByPk(examId);
+    if (!exam) {
+      return next(errorHandler(404, "Examen non trouvé"));
+    }
+
+    // Vérifier si le professeur est bien celui qui a créé l'examen
+    if (exam.professorId !== professorId) {
+      return next(errorHandler(403, "Accès refusé"));
+    }
+
+    // Sauvegarde directe du contenu sans transformation JSON
+    let correction = await Correction.findOne({ where: { examId } });
+
+    if (correction) {
+      // Mettre à jour la correction existante
+      correction.content = content;
+      await correction.save();
+    } else {
+      // Créer une nouvelle correction
+      correction = await Correction.create({
+        examId,
+        content
+      });
+    }
+
+    res.status(200).json({
+      message: "Correction mise à jour avec succès",
+      correction
+    });
+
+  } catch (error) {
+    console.error("❌ Erreur lors de la mise à jour de la correction :", error);
+    next(errorHandler(500, "Erreur serveur"));
+  }
+};
 module.exports = {
   createExam,
   getAllExams,
@@ -463,4 +521,5 @@ module.exports = {
   deleteExam,
   getAllExamsByAdmin,
   downloadExamFile,
+  createExamCorrection
 };
