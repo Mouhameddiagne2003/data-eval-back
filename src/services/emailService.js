@@ -49,7 +49,7 @@ const sendWelcomeEmail = async (email, prenom, nom) => {
                     <li><strong>Identifiant :</strong> ${email}</li>
                     <li><strong>Mot de passe :</strong> P@sser12345</li>
                 </ul>
-                <p>Veuillez vous connecter et changer votre mot de passe dès que possible.</p>
+                <p>Veuillez vous connecter via: https://data-eval-frontend.onrender.com/login et changer votre mot de passe dès que possible.</p>
                 <p>Bonne chance pour vos examens !</p>
                 <p>L'équipe Data-Eval 🚀</p>
             `,
