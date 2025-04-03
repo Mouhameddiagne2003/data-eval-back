@@ -225,7 +225,7 @@ const createExam = async (req, res, next) => {
             email: student.email,
             prenom: student.prenom,
             nom: student.nom,
-            password: "P@asser12345",
+            password: "P@sser12345",
 
             role: "student",
             status: "active",
